@@ -33,7 +33,7 @@ export default antfu({
       "error",
       {
         case: "kebabCase",
-        ignore: ["README.md"],
+        ignore: ["README.md", "PLAN.md"],
       },
     ],
     "react-compiler/react-compiler": "error",

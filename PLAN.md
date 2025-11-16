@@ -311,11 +311,12 @@ export const calculateTotalTravelTime = (
 
   for (let i = startIndex; i < endIndex; i++) {
     const segment = averageDurations.find(
-      d => d.from_stop_id === stopSequence[i].stopId &&
-           d.to_stop_id === stopSequence[i + 1].stopId
+      d => d.from_stop_id === stopSequence[i].stopId
+        && d.to_stop_id === stopSequence[i + 1].stopId
     );
 
-    if (!segment) return null;
+    if (!segment)
+      return null;
 
     totalDuration += segment.average_duration_seconds;
   }
@@ -324,7 +325,7 @@ export const calculateTotalTravelTime = (
 };
 
 // ❌ MAL - Comentarios innecesarios
-export const calculateTotalTravelTime = (...) => {
+export const calculateTotalTravelTime = (/* ... */) => {
   // Find the start index in the sequence
   const startIndex = stopSequence.findIndex(s => s.stopId === startStopId);
   // Find the end index in the sequence
@@ -346,7 +347,7 @@ export const calculateTotalTravelTime = (...) => {
 ### `src/types/gtfs.ts`
 
 ```typescript
-export interface Stop {
+export type Stop = {
   stop_id: string;
   stop_name: string;
   stop_lat?: string;
@@ -354,9 +355,9 @@ export interface Stop {
   location_type?: string;
   parent_station?: string;
   wheelchair_boarding?: string;
-}
+};
 
-export interface Route {
+export type Route = {
   route_id: string;
   agency_id?: string;
   route_short_name: string;
@@ -364,57 +365,57 @@ export interface Route {
   route_type?: string;
   route_color?: string;
   route_text_color?: string;
-}
+};
 
-export interface Trip {
+export type Trip = {
   route_id: string;
   service_id: string;
   trip_id: string;
   trip_headsign?: string;
   direction_id: string;
   shape_id?: string;
-}
+};
 
-export interface Frequency {
+export type Frequency = {
   trip_id: string;
   start_time: string;
   end_time: string;
   headway_secs: number;
   exact_times: number;
-}
+};
 ```
 
 ### `src/types/domain.ts`
 
 ```typescript
-export interface StopOnLine {
+export type StopOnLine = {
   stopId: string;
   stopName: string;
   sequence: number;
-}
+};
 
-export interface DirectionOption {
+export type DirectionOption = {
   stopId: string;
   lineId: string;
   selectedStopName: string;
   directionDisplayName: string;
   rawDirectionId: number;
-}
+};
 
-export interface AverageDuration {
+export type AverageDuration = {
   from_stop_id: string;
   to_stop_id: string;
   average_duration_seconds: number;
   sample_size: number;
-}
+};
 
-export interface LineAverageDurations {
+export type LineAverageDurations = {
   [lineShortName: string]: AverageDuration[];
-}
+};
 
-export interface AverageDurationsData {
+export type AverageDurationsData = {
   lineAverageDurations: LineAverageDurations;
-}
+};
 
 export type RouteToStopsData = Record<string, StopOnLine[]>;
 ```
@@ -422,19 +423,19 @@ export type RouteToStopsData = Record<string, StopOnLine[]>;
 ### `src/types/api.ts`
 
 ```typescript
-import type { Stop, Route } from './gtfs';
-import type { StopOnLine } from './domain';
+import type { StopOnLine } from "./domain";
+import type { Route, Stop } from "./gtfs";
 
-export interface SearchResult {
+export type SearchResult = {
   stop: Stop;
   route: Route;
   direction: string;
   headsign: string;
-}
+};
 
-export type ArrivalStatus = 'on-time' | 'delayed' | 'early' | 'unknown';
+export type ArrivalStatus = "on-time" | "delayed" | "early" | "unknown";
 
-export interface ArrivalInfo {
+export type ArrivalInfo = {
   tripId: string;
   routeId: string;
   estimatedArrivalTime: number;
@@ -443,75 +444,75 @@ export interface ArrivalInfo {
   departureTimeFromTerminal?: string;
   vehicleId?: string;
   isEstimate?: boolean;
-}
+};
 
-export interface StopWithArrival extends StopOnLine {
+export type StopWithArrival = {
   nextArrival?: {
     estimatedArrivalTime: number;
     delaySeconds: number;
     status: ArrivalStatus;
   };
-}
+} & StopOnLine;
 
-export interface FrequencyInfo {
+export type FrequencyInfo = {
   startTime: string;
   endTime: string;
   headwaySeconds: number;
-}
+};
 
-export interface RealtimeResponse {
+export type RealtimeResponse = {
   arrivals: ArrivalInfo[];
   lineStopsWithArrivals: StopWithArrival[];
   timestamp: number;
   frequency?: FrequencyInfo;
   shouldShowNoDataMessage?: boolean;
-}
+};
 ```
 
 ### `src/types/external.ts`
 
 ```typescript
-export interface ExternalApiArrivalDepartureInfo {
+export type ExternalApiArrivalDepartureInfo = {
   time?: number;
   delay?: number;
-}
+};
 
-export interface ExternalApiStation {
+export type ExternalApiStation = {
   stop_id: string;
   stop_name: string;
   arrival?: ExternalApiArrivalDepartureInfo;
   departure?: ExternalApiArrivalDepartureInfo;
-}
+};
 
-export interface ExternalApiTripLinea {
+export type ExternalApiTripLinea = {
   Trip_Id: string;
   Route_Id: string;
   Direction_ID: number | string;
   start_time: string;
   start_date: string;
   Estaciones: ExternalApiStation[];
-}
+};
 
-export interface ExternalApiEntity {
+export type ExternalApiEntity = {
   ID: string;
   Linea: ExternalApiTripLinea;
-}
+};
 
-export interface ExternalApiResponse {
+export type ExternalApiResponse = {
   Header: {
     timestamp: number;
   };
   Entity: ExternalApiEntity[];
-}
+};
 ```
 
 ### `src/types/index.ts`
 
 ```typescript
-export * from './gtfs';
-export * from './domain';
-export * from './api';
-export * from './external';
+export * from "./api";
+export * from "./domain";
+export * from "./external";
+export * from "./gtfs";
 ```
 
 ---
@@ -569,47 +570,47 @@ export * from './external';
 ### `vite.config.ts`
 
 ```typescript
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { TanStackRouterVite } from '@tanstack/router-vite-plugin';
-import { VitePWA } from 'vite-plugin-pwa';
-import path from 'path';
+import { TanStackRouterVite } from "@tanstack/router-vite-plugin";
+import react from "@vitejs/plugin-react";
+import path from "node:path";
+import { defineConfig } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   plugins: [
     react(),
     TanStackRouterVite(),
     VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/**/*'],
+      registerType: "autoUpdate",
+      includeAssets: ["favicon.svg", "icons/**/*"],
       manifest: {
-        name: '¿Dónde está el Subte?',
-        short_name: 'Subte BA',
-        description: 'Consulta arribos en tiempo real del subterráneo de Buenos Aires',
-        theme_color: '#2563eb',
-        background_color: '#ffffff',
-        display: 'standalone',
+        name: "¿Dónde está el Subte?",
+        short_name: "Subte BA",
+        description: "Consulta arribos en tiempo real del subterráneo de Buenos Aires",
+        theme_color: "#2563eb",
+        background_color: "#ffffff",
+        display: "standalone",
         icons: [
           {
-            src: '/icons/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png'
+            src: "/icons/icon-192.png",
+            sizes: "192x192",
+            type: "image/png"
           },
           {
-            src: '/icons/icon-512.png',
-            sizes: '512x512',
-            type: 'image/png'
+            src: "/icons/icon-512.png",
+            sizes: "512x512",
+            type: "image/png"
           }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,json}"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/apitransporte\.buenosaires\.gob\.ar\/.*/i,
-            handler: 'NetworkFirst',
+            handler: "NetworkFirst",
             options: {
-              cacheName: 'gcba-api-cache',
+              cacheName: "gcba-api-cache",
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 30
@@ -622,7 +623,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 });
@@ -661,48 +662,48 @@ export default defineConfig({
 ### `tailwind.config.ts`
 
 ```typescript
-import type { Config } from 'tailwindcss';
+import type { Config } from "tailwindcss";
 
 export default {
-  darkMode: ['class'],
-  content: ['./src/**/*.{ts,tsx}'],
+  darkMode: ["class"],
+  content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [require("tailwindcss-animate")],
 } satisfies Config;
 ```
 
@@ -758,8 +759,8 @@ VITE_SUBTE_API_CLIENT_SECRET=your_client_secret_here
 ```typescript
 export const DWELL_TIME_SECONDS = 24;
 export const MAX_ARRIVALS_TO_RETURN = 4;
-export const LINES_WITH_VALID_REPORTS = new Set(['LineaA', 'LineaB', 'LineaE']);
-export const ALLOWED_LINES = ['LineaA', 'LineaB', 'LineaE', 'LineaPM'];
+export const LINES_WITH_VALID_REPORTS = new Set(["LineaA", "LineaB", "LineaE"]);
+export const ALLOWED_LINES = ["LineaA", "LineaB", "LineaE", "LineaPM"];
 ```
 
 ---
@@ -771,9 +772,10 @@ export const ALLOWED_LINES = ['LineaA', 'LineaB', 'LineaE', 'LineaPM'];
 #### `src/features/lines/hooks/use-routes-query.ts`
 
 ```typescript
-import { queryOptions, useQuery } from '@tanstack/react-query';
-import { fetchRoutes } from '@/lib/api/fetch-routes';
-import { queryKeys } from '@/lib/query/query-keys';
+import { queryOptions, useQuery } from "@tanstack/react-query";
+
+import { fetchRoutes } from "@/lib/api/fetch-routes";
+import { queryKeys } from "@/lib/query/query-keys";
 
 export const routesQueryOptions = queryOptions({
   queryKey: queryKeys.routes,
@@ -801,7 +803,7 @@ export const LineSelector = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {sortedRoutes.map((route) => (
+      {sortedRoutes.map(route => (
         <LineCard key={route.route_id} route={route} />
       ))}
     </div>
@@ -858,20 +860,25 @@ export const LineCard = ({ route }: LineCardProps) => {
 #### `src/features/lines/utils/filter-lines.ts`
 
 ```typescript
-import { ALLOWED_LINES } from '@/constants';
-import type { Route } from '@/types';
+import type { Route } from "@/types";
+
+import { ALLOWED_LINES } from "@/constants";
 
 export const filterAndSortLines = (routes: Route[]): Route[] => {
   const filtered = routes.filter(route => ALLOWED_LINES.includes(route.route_id));
 
   return filtered.sort((a, b) => {
-    const order = ['A', 'B', 'E', 'PM'];
+    const order = ["A", "B", "E", "PM"];
     const aIndex = order.indexOf(a.route_short_name);
     const bIndex = order.indexOf(b.route_short_name);
 
-    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-    if (aIndex !== -1) return -1;
-    if (bIndex !== -1) return 1;
+    if (aIndex !== -1 && bIndex !== -1)
+      return aIndex - bIndex;
+    if (aIndex !== -1)
+      return -1;
+    if (bIndex !== -1)
+      return 1;
+
     return a.route_short_name.localeCompare(b.route_short_name);
   });
 };
@@ -884,9 +891,10 @@ export const filterAndSortLines = (routes: Route[]): Route[] => {
 #### `src/features/arrivals/hooks/use-realtime-query.ts`
 
 ```typescript
-import { queryOptions, useQuery } from '@tanstack/react-query';
-import { fetchRealtime } from '@/lib/api/fetch-realtime';
-import { queryKeys } from '@/lib/query/query-keys';
+import { queryOptions, useQuery } from "@tanstack/react-query";
+
+import { fetchRealtime } from "@/lib/api/fetch-realtime";
+import { queryKeys } from "@/lib/query/query-keys";
 
 export const realtimeQueryOptions = (
   routeId: string,
@@ -900,7 +908,7 @@ export const realtimeQueryOptions = (
   refetchIntervalInBackground: false,
   enabled: !!routeId && !!stopId && !!direction,
   retry: 3,
-  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
 });
 
 export const useRealtimeQuery = (
@@ -915,19 +923,21 @@ export const useRealtimeQuery = (
 #### `src/features/arrivals/utils/calculate-arrivals.ts`
 
 ```typescript
-import { DWELL_TIME_SECONDS, MAX_ARRIVALS_TO_RETURN, LINES_WITH_VALID_REPORTS } from '@/constants';
 import type {
-  ExternalApiResponse,
-  RouteToStopsData,
+  ArrivalInfo,
+  ArrivalStatus,
   AverageDurationsData,
+  ExternalApiResponse,
   Frequency,
   RealtimeResponse,
-  ArrivalInfo,
+  RouteToStopsData,
   StopWithArrival,
-  ArrivalStatus,
-} from '@/types';
-import { getTotalTravelTime } from './get-travel-time';
-import { getCurrentFrequency } from './get-frequency';
+} from "@/types";
+
+import { DWELL_TIME_SECONDS, LINES_WITH_VALID_REPORTS, MAX_ARRIVALS_TO_RETURN } from "@/constants";
+
+import { getCurrentFrequency } from "./get-frequency";
+import { getTotalTravelTime } from "./get-travel-time";
 
 export const calculateArrivals = (
   externalData: ExternalApiResponse,
@@ -951,8 +961,8 @@ export const calculateArrivals = (
     };
   }
 
-  const lineShortName = routeId.replace(/^Linea/, '');
-  const targetDirectionIdNum = parseInt(direction, 10);
+  const lineShortName = routeId.replace(/^Linea/, "");
+  const targetDirectionIdNum = Number.parseInt(direction, 10);
   const bestArrivalPerStopId = new Map<string, {
     estimatedArrivalTime: number;
     delaySeconds: number;
@@ -964,8 +974,10 @@ export const calculateArrivals = (
     let tripDirectionIdNum: number | null = null;
 
     if (tripInfo.Direction_ID !== undefined && tripInfo.Direction_ID !== null) {
-      const parsedNum = parseInt(String(tripInfo.Direction_ID), 10);
-      if (!isNaN(parsedNum)) tripDirectionIdNum = parsedNum;
+      const parsedNum = Number.parseInt(String(tripInfo.Direction_ID), 10);
+
+      if (!Number.isNaN(parsedNum))
+        tripDirectionIdNum = parsedNum;
     }
 
     if (tripInfo.Route_Id === routeId && tripDirectionIdNum === targetDirectionIdNum) {
@@ -975,9 +987,11 @@ export const calculateArrivals = (
           const delay = station.arrival.delay ?? 0;
 
           let isValidReport: boolean;
+
           if (LINES_WITH_VALID_REPORTS.has(tripInfo.Route_Id)) {
             isValidReport = true;
-          } else {
+          }
+          else {
             isValidReport = delay > 0 || arrivalTime !== headerTime;
           }
 
@@ -985,10 +999,14 @@ export const calculateArrivals = (
             const estimatedArrivalTime = headerTime + delay;
 
             if (estimatedArrivalTime >= headerTime - 60) {
-              let status: ArrivalStatus = 'unknown';
-              if (delay === 0) status = 'on-time';
-              else if (delay < 0 && delay >= -180) status = 'early';
-              else if (delay < -180 || delay > 180) status = 'delayed';
+              let status: ArrivalStatus = "unknown";
+
+              if (delay === 0)
+                status = "on-time";
+              else if (delay < 0 && delay >= -180)
+                status = "early";
+              else if (delay < -180 || delay > 180)
+                status = "delayed";
 
               const currentArrival = { estimatedArrivalTime, delaySeconds: delay, status };
               const existing = bestArrivalPerStopId.get(station.stop_id);
@@ -1017,13 +1035,13 @@ export const calculateArrivals = (
 
   const arrivalAtTarget = bestArrivalPerStopId.get(stopId);
   let lastRelevantArrivalTime = -Infinity;
-  let tripIdForFrequency = '';
+  let tripIdForFrequency = "";
 
   if (arrivalAtTarget && arrivalAtTarget.estimatedArrivalTime > headerTime) {
     const sourceEntity = externalData.Entity.find(
-      e => e.Linea.Route_Id === routeId &&
-           parseInt(String(e.Linea.Direction_ID), 10) === targetDirectionIdNum &&
-           e.Linea.Estaciones.some(s => s.stop_id === stopId)
+      e => e.Linea.Route_Id === routeId
+        && Number.parseInt(String(e.Linea.Direction_ID), 10) === targetDirectionIdNum
+        && e.Linea.Estaciones.some(s => s.stop_id === stopId)
     );
 
     if (sourceEntity?.Linea.Trip_Id) {
@@ -1097,9 +1115,11 @@ export const calculateArrivals = (
     nextArrival: bestArrivalPerStopId.get(stop.stopId),
   }));
 
-  let frequency = undefined;
+  let frequency;
+
   if (tripIdForFrequency) {
     const currentFreq = getCurrentFrequency(tripIdForFrequency, frequencies);
+
     if (currentFreq) {
       frequency = {
         startTime: currentFreq.start_time,
@@ -1122,7 +1142,7 @@ export const calculateArrivals = (
 #### `src/features/arrivals/utils/get-travel-time.ts`
 
 ```typescript
-import type { StopOnLine, AverageDuration } from '@/types';
+import type { AverageDuration, StopOnLine } from "@/types";
 
 export const getTotalTravelTime = (
   startStopId: string,
@@ -1147,7 +1167,8 @@ export const getTotalTravelTime = (
       d => d.from_stop_id === current.stopId && d.to_stop_id === next.stopId
     );
 
-    if (!segment) return null;
+    if (!segment)
+      return null;
 
     totalDuration += segment.average_duration_seconds;
   }
@@ -1159,17 +1180,18 @@ export const getTotalTravelTime = (
 #### `src/features/arrivals/utils/get-frequency.ts`
 
 ```typescript
-import type { Frequency } from '@/types';
+import type { Frequency } from "@/types";
 
 export const getCurrentFrequency = (tripId: string, frequencies: Frequency[]): Frequency | null => {
   const now = new Date();
   const currentSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
 
-  return frequencies.find(f => {
-    if (f.trip_id !== tripId) return false;
+  return frequencies.find((f) => {
+    if (f.trip_id !== tripId)
+      return false;
 
-    const startParts = f.start_time.split(':').map(Number);
-    const endParts = f.end_time.split(':').map(Number);
+    const startParts = f.start_time.split(":").map(Number);
+    const endParts = f.end_time.split(":").map(Number);
 
     const startSeconds = startParts[0] * 3600 + startParts[1] * 60 + (startParts[2] || 0);
     const endSeconds = endParts[0] * 3600 + endParts[1] * 60 + (endParts[2] || 0);
@@ -1187,8 +1209,10 @@ export const getCurrentFrequency = (tripId: string, frequencies: Frequency[]): F
 
 ```typescript
 export const isColorBright = (color: string): boolean => {
-  const hex = color.replace('#', '');
-  if (hex.length !== 6 && hex.length !== 3) return false;
+  const hex = color.replace("#", "");
+
+  if (hex.length !== 6 && hex.length !== 3)
+    return false;
 
   let r_hex: string, g_hex: string, b_hex: string;
 
@@ -1196,26 +1220,32 @@ export const isColorBright = (color: string): boolean => {
     r_hex = hex[0] + hex[0];
     g_hex = hex[1] + hex[1];
     b_hex = hex[2] + hex[2];
-  } else {
+  }
+  else {
     r_hex = hex.substring(0, 2);
     g_hex = hex.substring(2, 4);
     b_hex = hex.substring(4, 6);
   }
 
-  const r = parseInt(r_hex, 16);
-  const g = parseInt(g_hex, 16);
-  const b = parseInt(b_hex, 16);
+  const r = Number.parseInt(r_hex, 16);
+  const g = Number.parseInt(g_hex, 16);
+  const b = Number.parseInt(b_hex, 16);
 
-  if (isNaN(r) || isNaN(g) || isNaN(b)) return false;
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b))
+    return false;
 
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
   return luminance > 0.5;
 };
 
 export const getTextColorForBackground = (bgColor: string, textColor?: string): string => {
   const bright = isColorBright(bgColor);
-  if (textColor) return `#${textColor}`;
-  return bright ? '#000000' : '#FFFFFF';
+
+  if (textColor)
+    return `#${textColor}`;
+
+  return bright ? "#000000" : "#FFFFFF";
 };
 ```
 
@@ -1223,17 +1253,19 @@ export const getTextColorForBackground = (bgColor: string, textColor?: string): 
 
 ```typescript
 export const formatTime = (timestampInSeconds: number | undefined, includeSeconds = false): string => {
-  if (timestampInSeconds === null || timestampInSeconds === undefined || isNaN(timestampInSeconds)) {
-    return 'N/A';
+  if (timestampInSeconds === null || timestampInSeconds === undefined || Number.isNaN(timestampInSeconds)) {
+    return "N/A";
   }
 
   const date = new Date(timestampInSeconds * 1000);
-  if (isNaN(date.getTime())) return 'Hora Inválida';
 
-  return date.toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: includeSeconds ? '2-digit' : undefined,
+  if (Number.isNaN(date.getTime()))
+    return "Hora Inválida";
+
+  return date.toLocaleTimeString("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: includeSeconds ? "2-digit" : undefined,
   });
 };
 
@@ -1241,19 +1273,23 @@ export const getTimeUntilArrival = (
   arrivalTimestampInSeconds: number | undefined,
   currentTime: Date
 ): string => {
-  if (arrivalTimestampInSeconds === undefined || isNaN(arrivalTimestampInSeconds)) {
-    return 'N/A';
+  if (arrivalTimestampInSeconds === undefined || Number.isNaN(arrivalTimestampInSeconds)) {
+    return "N/A";
   }
 
   const arrivalTimeMs = arrivalTimestampInSeconds * 1000;
   const diffMs = arrivalTimeMs - currentTime.getTime();
   const diffSecondsTotal = Math.round(diffMs / 1000);
 
-  if (diffSecondsTotal <= 10) return 'Llegando';
-  if (diffSecondsTotal < 0) return 'Llegando';
-  if (diffSecondsTotal < 60) return '>1 min';
+  if (diffSecondsTotal <= 10)
+    return "Llegando";
+  if (diffSecondsTotal < 0)
+    return "Llegando";
+  if (diffSecondsTotal < 60)
+    return ">1 min";
 
   const minutes = Math.ceil(diffSecondsTotal / 60);
+
   return `${minutes} min`;
 };
 ```
@@ -1261,8 +1297,10 @@ export const getTimeUntilArrival = (
 ### `src/lib/utils/cn.ts`
 
 ```typescript
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import type { ClassValue } from "clsx";
+
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export const cn = (...inputs: ClassValue[]) => {
   return twMerge(clsx(inputs));
@@ -1272,7 +1310,7 @@ export const cn = (...inputs: ClassValue[]) => {
 ### `src/hooks/use-current-time.ts`
 
 ```typescript
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from "react";
 
 export const useCurrentTime = (updateInterval = 1000): Date => {
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -1292,7 +1330,7 @@ export const useCurrentTime = (updateInterval = 1000): Date => {
 ### `src/hooks/use-debounced-value.ts`
 
 ```typescript
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from "react";
 
 export const useDebouncedValue = <T>(value: T, delay = 300): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -1316,8 +1354,9 @@ export const useDebouncedValue = <T>(value: T, delay = 300): T => {
 ### `src/lib/api/fetch-realtime.ts`
 
 ```typescript
-import type { RealtimeResponse } from '@/types';
-import { calculateArrivals } from '@/features/arrivals/utils/calculate-arrivals';
+import type { RealtimeResponse } from "@/types";
+
+import { calculateArrivals } from "@/features/arrivals/utils/calculate-arrivals";
 
 export const fetchRealtime = async (
   routeId: string,
@@ -1328,7 +1367,7 @@ export const fetchRealtime = async (
   const CLIENT_SECRET = import.meta.env.VITE_SUBTE_API_CLIENT_SECRET;
 
   if (!CLIENT_ID || !CLIENT_SECRET) {
-    throw new Error('API credentials not configured');
+    throw new Error("API credentials not configured");
   }
 
   const externalResponse = await fetch(
@@ -1342,9 +1381,9 @@ export const fetchRealtime = async (
   const externalData = await externalResponse.json();
 
   const [routeToStops, averageDurations, frequencies] = await Promise.all([
-    fetch('/data/route-to-stops.json').then(r => r.json()),
-    fetch('/data/tiempo-promedio-entre-estaciones.json').then(r => r.json()),
-    fetch('/data/frequencies.json').then(r => r.json()),
+    fetch("/data/route-to-stops.json").then(r => r.json()),
+    fetch("/data/tiempo-promedio-entre-estaciones.json").then(r => r.json()),
+    fetch("/data/frequencies.json").then(r => r.json()),
   ]);
 
   return calculateArrivals(externalData, routeId, stopId, direction, routeToStops, averageDurations, frequencies);
@@ -1354,14 +1393,16 @@ export const fetchRealtime = async (
 ### `src/lib/api/fetch-routes.ts`
 
 ```typescript
-import { routesSchema } from '@/schemas/gtfs-schema';
-import { ALLOWED_LINES } from '@/constants';
-import type { Route } from '@/types';
+import type { Route } from "@/types";
+
+import { ALLOWED_LINES } from "@/constants";
+import { routesSchema } from "@/schemas/gtfs-schema";
 
 export const fetchRoutes = async (): Promise<Route[]> => {
-  const response = await fetch('/data/routes.json');
+  const response = await fetch("/data/routes.json");
   const data = await response.json();
   const validated = routesSchema.parse(data);
+
   return validated.filter(route => ALLOWED_LINES.includes(route.route_id));
 };
 ```
@@ -1449,20 +1490,29 @@ export const fetchRoutes = async (): Promise<Route[]> => {
 
 ```typescript
 // MAL
-const [data, setData] = useState(null);
-useEffect(() => {
-  fetch('/api').then(r => r.json()).then(setData);
-}, []);
+function BadComponent() {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    fetch("/api").then(r => r.json()).then(setData);
+  }, []);
+}
 
 // BIEN
-const { data } = useQuery({ queryKey: ['data'], queryFn: fetchData });
+function GoodComponent() {
+  const { data } = useQuery({ queryKey: ["data"], queryFn: fetchData });
+}
 ```
 
 ### ❌ NO: Clases
 
 ```typescript
 // MAL
-class Calculator { ... }
+class Calculator {
+  add(a: number, b: number) {
+    return a + b;
+  }
+}
 
 // BIEN
 const calculateTotal = (a: number, b: number) => a + b;
@@ -1472,10 +1522,12 @@ const calculateTotal = (a: number, b: number) => a + b;
 
 ```typescript
 // MAL - duplicado en varios archivos
-const bright = (color.r + color.g + color.b) / 3 > 127;
-
 // BIEN - utilidad compartida
-import { isColorBright } from '@/lib/utils/colors';
+import { isColorBright } from "@/lib/utils/colors";
+
+const calculateBrightness = (color: { r: number; g: number; b: number }) => {
+  return (color.r + color.g + color.b) / 3 > 127;
+};
 ```
 
 ---
@@ -1484,12 +1536,14 @@ import { isColorBright } from '@/lib/utils/colors';
 
 ```typescript
 // src/features/arrivals/utils/__tests__/calculate-arrivals.test.ts
-import { describe, it, expect } from 'vitest';
-import { getTotalTravelTime } from '../get-travel-time';
+import { describe, expect, it } from "vitest";
 
-describe('getTotalTravelTime', () => {
-  it('should calculate total travel time correctly', () => {
+import { getTotalTravelTime } from "../get-travel-time";
+
+describe("getTotalTravelTime", () => {
+  it("should calculate total travel time correctly", () => {
     const result = getTotalTravelTime(/* ... */);
+
     expect(result).toBe(expectedDuration);
   });
 });
@@ -1509,13 +1563,13 @@ vercel
 
 ```toml
 [build]
-  command = "npm run build"
-  publish = "dist"
+command = "npm run build"
+publish = "dist"
 
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+from = "/*"
+to = "/index.html"
+status = 200
 ```
 
 ---
