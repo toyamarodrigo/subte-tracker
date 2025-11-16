@@ -16,6 +16,12 @@ export const fetchRealtime = async (
 
   const externalResponse = await fetch(
     `https://apitransporte.buenosaires.gob.ar/subtes/forecastGTFS?client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+    },
   );
 
   if (!externalResponse.ok) {
