@@ -4,7 +4,7 @@ import { ALLOWED_LINES } from "@/constants";
 import { routesSchema } from "@/schemas/gtfs-schema";
 
 export const fetchRoutes = async (): Promise<Route[]> => {
-  const response = await fetch("/data/routes.json");
+  const response = await fetch("/data/gtfs-routes.json");
   const data = await response.json();
   const validated = routesSchema.parse(data);
 

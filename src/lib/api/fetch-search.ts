@@ -7,10 +7,10 @@ export const fetchSearch = async (query: string): Promise<SearchResult[]> => {
     return [];
 
   const [routesResponse, stopsResponse, tripsResponse, routeToStopsResponse] = await Promise.all([
-    fetch("/data/routes.json"),
-    fetch("/data/stops.json"),
-    fetch("/data/trips.json"),
-    fetch("/data/route-to-stops.json"),
+    fetch("/data/gtfs-routes.json"),
+    fetch("/data/gtfs-stops.json"),
+    fetch("/data/gtfs-trips.json"),
+    fetch("/data/gtfs-route-to-stops.json"),
   ]);
 
   const routesData = await routesResponse.json();

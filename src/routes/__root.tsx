@@ -1,5 +1,9 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
+import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+
+import { AppFooter } from "@/components/layout/app-footer";
+import { AppHeader } from "@/components/layout/app-header";
+import { ErrorBoundary } from "@/components/layout/error-boundary";
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -7,30 +11,15 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <>
-      <div className="p-2 flex gap-2 text-lg">
-        <Link
-          to="/"
-          activeProps={{
-            className: "font-bold",
-          }}
-          activeOptions={{ exact: true }}
-        >
-          Home
-        </Link>
-        {" "}
-        <Link
-          to="/about"
-          activeProps={{
-            className: "font-bold",
-          }}
-        >
-          About
-        </Link>
-      </div>
-      <hr />
-      <Outlet />
-      <TanStackRouterDevtools position="bottom-right" />
-    </>
+    <div className="flex min-h-screen flex-col">
+      <AppHeader />
+      <main className="flex-1">
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
+      </main>
+      <AppFooter />
+      {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}
+    </div>
   );
 }

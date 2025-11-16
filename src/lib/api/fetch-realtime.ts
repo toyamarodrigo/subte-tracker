@@ -25,9 +25,9 @@ export const fetchRealtime = async (
   const externalData = await externalResponse.json();
 
   const [routeToStops, averageDurations, frequencies] = await Promise.all([
-    fetch("/data/route-to-stops.json").then(r => r.json()),
-    fetch("/data/tiempo-promedio-entre-estaciones.json").then(r => r.json()),
-    fetch("/data/frequencies.json").then(r => r.json()),
+    fetch("/data/gtfs-route-to-stops.json").then(r => r.json()),
+    fetch("/data/gtfs-tiempo-promedio-entre-estaciones.json").then(r => r.json()),
+    fetch("/data/gtfs-frequencies.json").then(r => r.json()),
   ]);
 
   return calculateArrivals(

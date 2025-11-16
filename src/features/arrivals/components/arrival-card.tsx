@@ -14,6 +14,21 @@ export const ArrivalCard = ({ arrival }: ArrivalCardProps) => {
   const timeUntil = getTimeUntilArrival(arrival.estimatedArrivalTime, currentTime);
   const formattedTime = formatTime(arrival.estimatedArrivalTime);
 
+  const diffSeconds = arrival.estimatedArrivalTime
+    ? Math.round((arrival.estimatedArrivalTime * 1000 - currentTime.getTime()) / 1000)
+    : Infinity;
+
+  let colorClass = "text-blue-600";
+  let animateClass = "";
+
+  if (diffSeconds <= 10) {
+    colorClass = "text-red-600";
+    animateClass = "animate-pulse";
+  }
+  else if (diffSeconds <= 60) {
+    colorClass = "text-red-600";
+  }
+
   const statusColors = {
     "on-time": "bg-green-500",
     "delayed": "bg-red-500",
@@ -26,10 +41,10 @@ export const ArrivalCard = ({ arrival }: ArrivalCardProps) => {
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl font-bold">{timeUntil}</span>
-            {arrival.isEstimate && (
-              <Badge variant="outline">Estimado</Badge>
-            )}
+            <span className={`text-2xl font-bold ${colorClass} ${animateClass}`}>
+              {timeUntil}
+            </span>
+            {arrival.isEstimate && <Badge variant="outline">Estimado</Badge>}
           </div>
           <div className="text-sm text-muted-foreground">
             {formattedTime}

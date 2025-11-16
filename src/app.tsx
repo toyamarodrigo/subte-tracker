@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
 import { routeTree } from "./route-tree.gen";
@@ -5,6 +6,9 @@ import { routeTree } from "./route-tree.gen";
 const router = createRouter({
   routeTree,
   defaultPreload: "intent",
+  context: {
+    queryClient: undefined!,
+  },
 });
 
 declare module "@tanstack/react-router" {
@@ -15,5 +19,14 @@ declare module "@tanstack/react-router" {
 }
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  const queryClient = useQueryClient();
+
+  return (
+    <RouterProvider
+      router={router}
+      context={{
+        queryClient,
+      }}
+    />
+  );
 }

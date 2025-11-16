@@ -7,9 +7,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LineLineIdRouteImport } from './routes/line/$lineId'
+import { Route as LineLineIdStopIdRouteImport } from './routes/line/$lineId/$stopId'
+import { Route as LineLineIdStopIdDirectionIdRouteImport } from './routes/line/$lineId/$stopId/$directionId'
 
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -20,35 +29,91 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LineLineIdRoute = LineLineIdRouteImport.update({
+  id: '/line/$lineId',
+  path: '/line/$lineId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LineLineIdStopIdRoute = LineLineIdStopIdRouteImport.update({
+  id: '/$stopId',
+  path: '/$stopId',
+  getParentRoute: () => LineLineIdRoute,
+} as any)
+const LineLineIdStopIdDirectionIdRoute =
+  LineLineIdStopIdDirectionIdRouteImport.update({
+    id: '/$directionId',
+    path: '/$directionId',
+    getParentRoute: () => LineLineIdStopIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/search': typeof SearchRoute
+  '/line/$lineId': typeof LineLineIdRouteWithChildren
+  '/line/$lineId/$stopId': typeof LineLineIdStopIdRouteWithChildren
+  '/line/$lineId/$stopId/$directionId': typeof LineLineIdStopIdDirectionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/search': typeof SearchRoute
+  '/line/$lineId': typeof LineLineIdRouteWithChildren
+  '/line/$lineId/$stopId': typeof LineLineIdStopIdRouteWithChildren
+  '/line/$lineId/$stopId/$directionId': typeof LineLineIdStopIdDirectionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/search': typeof SearchRoute
+  '/line/$lineId': typeof LineLineIdRouteWithChildren
+  '/line/$lineId/$stopId': typeof LineLineIdStopIdRouteWithChildren
+  '/line/$lineId/$stopId/$directionId': typeof LineLineIdStopIdDirectionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/search'
+    | '/line/$lineId'
+    | '/line/$lineId/$stopId'
+    | '/line/$lineId/$stopId/$directionId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about'
-  id: '__root__' | '/' | '/about'
+  to:
+    | '/'
+    | '/about'
+    | '/search'
+    | '/line/$lineId'
+    | '/line/$lineId/$stopId'
+    | '/line/$lineId/$stopId/$directionId'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/search'
+    | '/line/$lineId'
+    | '/line/$lineId/$stopId'
+    | '/line/$lineId/$stopId/$directionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  SearchRoute: typeof SearchRoute
+  LineLineIdRoute: typeof LineLineIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -63,12 +128,58 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/line/$lineId': {
+      id: '/line/$lineId'
+      path: '/line/$lineId'
+      fullPath: '/line/$lineId'
+      preLoaderRoute: typeof LineLineIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/line/$lineId/$stopId': {
+      id: '/line/$lineId/$stopId'
+      path: '/$stopId'
+      fullPath: '/line/$lineId/$stopId'
+      preLoaderRoute: typeof LineLineIdStopIdRouteImport
+      parentRoute: typeof LineLineIdRoute
+    }
+    '/line/$lineId/$stopId/$directionId': {
+      id: '/line/$lineId/$stopId/$directionId'
+      path: '/$directionId'
+      fullPath: '/line/$lineId/$stopId/$directionId'
+      preLoaderRoute: typeof LineLineIdStopIdDirectionIdRouteImport
+      parentRoute: typeof LineLineIdStopIdRoute
+    }
   }
 }
+
+interface LineLineIdStopIdRouteChildren {
+  LineLineIdStopIdDirectionIdRoute: typeof LineLineIdStopIdDirectionIdRoute
+}
+
+const LineLineIdStopIdRouteChildren: LineLineIdStopIdRouteChildren = {
+  LineLineIdStopIdDirectionIdRoute: LineLineIdStopIdDirectionIdRoute,
+}
+
+const LineLineIdStopIdRouteWithChildren =
+  LineLineIdStopIdRoute._addFileChildren(LineLineIdStopIdRouteChildren)
+
+interface LineLineIdRouteChildren {
+  LineLineIdStopIdRoute: typeof LineLineIdStopIdRouteWithChildren
+}
+
+const LineLineIdRouteChildren: LineLineIdRouteChildren = {
+  LineLineIdStopIdRoute: LineLineIdStopIdRouteWithChildren,
+}
+
+const LineLineIdRouteWithChildren = LineLineIdRoute._addFileChildren(
+  LineLineIdRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  SearchRoute: SearchRoute,
+  LineLineIdRoute: LineLineIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

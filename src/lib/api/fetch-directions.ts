@@ -7,8 +7,8 @@ export const fetchDirections = async (
   stopId: string,
 ): Promise<DirectionOption[]> => {
   const [tripsResponse, routeToStopsResponse] = await Promise.all([
-    fetch("/data/trips.json"),
-    fetch("/data/route-to-stops.json"),
+    fetch("/data/gtfs-trips.json"),
+    fetch("/data/gtfs-route-to-stops.json"),
   ]);
 
   const tripsData = await tripsResponse.json();

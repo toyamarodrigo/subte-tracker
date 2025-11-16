@@ -9,6 +9,7 @@ type ArrivalsViewProps = {
   stopName: string;
   routeName: string;
   selectedStopId?: string;
+  isFetching?: boolean;
 };
 
 export const ArrivalsView = ({
@@ -16,11 +17,12 @@ export const ArrivalsView = ({
   stopName,
   routeName,
   selectedStopId,
+  isFetching,
 }: ArrivalsViewProps) => {
   if (data.shouldShowNoDataMessage) {
     return (
       <div className="text-center text-muted-foreground py-8">
-        No hay datos disponibles para esta línea
+        El GCBA no reporta datos para esta línea
       </div>
     );
   }
@@ -31,6 +33,8 @@ export const ArrivalsView = ({
         stopName={stopName}
         routeName={routeName}
         frequency={data.frequency}
+        timestamp={data.timestamp}
+        isFetching={isFetching}
       />
       <div>
         <h2 className="text-lg font-semibold mb-4">Próximos arribos</h2>

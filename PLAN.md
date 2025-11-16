@@ -1201,6 +1201,304 @@ export const getCurrentFrequency = (tripId: string, frequencies: Frequency[]): F
 };
 ```
 
+#### `src/features/arrivals/components/arrivals-header.tsx`
+
+```typescript
+import type { FrequencyInfo } from "@/types";
+
+import { useCurrentTime } from "@/hooks/use-current-time";
+import { formatTime } from "@/lib/utils/time";
+import { FrequencyBadge } from "./frequency-badge";
+
+type ArrivalsHeaderProps = {
+  stopName: string;
+  routeName: string;
+  frequency?: FrequencyInfo;
+  timestamp?: number;
+  isFetching?: boolean;
+};
+
+export const ArrivalsHeader = ({
+  stopName,
+  routeName,
+  frequency,
+  timestamp,
+  isFetching,
+}: ArrivalsHeaderProps) => {
+  const currentTime = useCurrentTime();
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold">{stopName}</h1>
+        <p className="text-muted-foreground">{routeName}</p>
+      </div>
+
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <div>
+          <span>Hora: </span>
+          <span className="font-mono">
+            {currentTime.toLocaleTimeString("es-AR", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+          </span>
+        </div>
+        {timestamp && (
+          <div>
+            <span>Act: </span>
+            <span className="font-mono">{formatTime(timestamp / 1000, true)}</span>
+          </div>
+        )}
+      </div>
+
+      {isFetching && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          <span>Actualizando...</span>
+        </div>
+      )}
+
+      {frequency && <FrequencyBadge frequency={frequency} />}
+    </div>
+  );
+};
+```
+
+#### `src/features/arrivals/components/arrival-card.tsx`
+
+```typescript
+import type { ArrivalInfo } from "@/types";
+
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { useCurrentTime } from "@/hooks/use-current-time";
+import { formatTime, getTimeUntilArrival } from "@/lib/utils/time";
+
+type ArrivalCardProps = {
+  arrival: ArrivalInfo;
+};
+
+export const ArrivalCard = ({ arrival }: ArrivalCardProps) => {
+  const currentTime = useCurrentTime();
+  const timeUntil = getTimeUntilArrival(arrival.estimatedArrivalTime, currentTime);
+  const formattedTime = formatTime(arrival.estimatedArrivalTime);
+
+  const diffSeconds = arrival.estimatedArrivalTime
+    ? Math.round((arrival.estimatedArrivalTime * 1000 - currentTime.getTime()) / 1000)
+    : Infinity;
+
+  let colorClass = "text-blue-600";
+  let animateClass = "";
+
+  if (diffSeconds <= 10) {
+    colorClass = "text-red-600";
+    animateClass = "animate-pulse";
+  }
+  else if (diffSeconds <= 60) {
+    colorClass = "text-red-600";
+  }
+
+  const statusColors = {
+    "on-time": "bg-green-500",
+    "delayed": "bg-red-500",
+    "early": "bg-blue-500",
+    "unknown": "bg-gray-500",
+  };
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`text-2xl font-bold ${colorClass} ${animateClass}`}>
+              {timeUntil}
+            </span>
+            {arrival.isEstimate && <Badge variant="outline">Estimado</Badge>}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {formattedTime}
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <div className={`w-3 h-3 rounded-full ${statusColors[arrival.status]}`} />
+          {arrival.delaySeconds !== 0 && (
+            <span className="text-xs text-muted-foreground">
+              {arrival.delaySeconds > 0 ? "+" : ""}
+              {Math.round(arrival.delaySeconds / 60)}
+              {" "}
+              min
+            </span>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+};
+```
+
+#### `src/features/arrivals/components/frequency-badge.tsx`
+
+```typescript
+import type { FrequencyInfo } from "@/types";
+
+import { Badge } from "@/components/ui/badge";
+
+type FrequencyBadgeProps = {
+  frequency: FrequencyInfo;
+};
+
+const formatHeadwayTime = (seconds: number): string => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+};
+
+export const FrequencyBadge = ({ frequency }: FrequencyBadgeProps) => {
+  const headwayFormatted = formatHeadwayTime(frequency.headwaySeconds);
+
+  return (
+    <Badge variant="secondary" className="text-sm">
+      En este horario (
+      {frequency.startTime}
+      {" "}
+      -
+      {" "}
+      {frequency.endTime}
+      ) la frecuencia es de
+      {" "}
+      {headwayFormatted}
+      {" "}
+      entre trenes.
+    </Badge>
+  );
+};
+```
+
+#### `src/features/arrivals/components/arrivals-view.tsx`
+
+```typescript
+import type { RealtimeResponse } from "@/types";
+
+import { ArrivalsHeader } from "./arrivals-header";
+import { ArrivalsList } from "./arrivals-list";
+import { StopLineView } from "./stop-line-view";
+
+type ArrivalsViewProps = {
+  data: RealtimeResponse;
+  stopName: string;
+  routeName: string;
+  selectedStopId?: string;
+  isFetching?: boolean;
+};
+
+export const ArrivalsView = ({
+  data,
+  stopName,
+  routeName,
+  selectedStopId,
+  isFetching,
+}: ArrivalsViewProps) => {
+  if (data.shouldShowNoDataMessage) {
+    return (
+      <div className="text-center text-muted-foreground py-8">
+        El GCBA no reporta datos para esta línea
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <ArrivalsHeader
+        stopName={stopName}
+        routeName={routeName}
+        frequency={data.frequency}
+        timestamp={data.timestamp}
+        isFetching={isFetching}
+      />
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Próximos arribos</h2>
+        <ArrivalsList arrivals={data.arrivals} />
+      </div>
+      {data.lineStopsWithArrivals.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Estaciones en la línea</h2>
+          <StopLineView
+            stops={data.lineStopsWithArrivals}
+            selectedStopId={selectedStopId}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+#### `src/features/arrivals/components/arrivals-list.tsx`
+
+```typescript
+import type { ArrivalInfo } from "@/types";
+
+import { ArrivalCard } from "./arrival-card";
+
+type ArrivalsListProps = {
+  arrivals: ArrivalInfo[];
+};
+
+export const ArrivalsList = ({ arrivals }: ArrivalsListProps) => {
+  if (arrivals.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground py-8">
+        No hay arribos disponibles
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {arrivals.map(arrival => (
+        <ArrivalCard key={arrival.tripId} arrival={arrival} />
+      ))}
+    </div>
+  );
+};
+```
+
+#### Error Handling in Routes
+
+When using `useRealtimeQuery` or `realtimeQueryOptions` with `useSuspenseQuery`, handle errors:
+
+```typescript
+// In route component
+const { data, error, isFetching } = useQuery(
+  realtimeQueryOptions(lineId, stopId, directionId)
+);
+
+if (error) {
+  return (
+    <ErrorState
+      message={error instanceof Error ? error.message : "Error al cargar los arribos"}
+      onRetry={() => {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.realtime(lineId, stopId, directionId),
+        });
+      }}
+    />
+  );
+}
+
+return (
+  <ArrivalsView
+    data={data}
+    stopName={stopName}
+    routeName={routeName}
+    selectedStopId={stopId}
+    isFetching={isFetching}
+  />
+);
+```
+
 ---
 
 ## Utilidades Compartidas

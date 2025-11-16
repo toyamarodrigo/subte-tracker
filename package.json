@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "vite --port=3000",
+    "dev": "vite --port 3000 --host",
     "build": "vite build",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
@@ -89,6 +89,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.2",
+    "vite-plugin-mkcert": "^1.17.9",
     "vite-plugin-pwa": "^1.1.0",
     "vite-tsconfig-paths": "^5.1.4",
     "workbox-window": "^7.3.0"

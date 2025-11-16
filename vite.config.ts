@@ -3,6 +3,7 @@ import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 import { defineConfig } from "vite";
+import mkcert from "vite-plugin-mkcert";
 import { VitePWA } from "vite-plugin-pwa";
 
 const ReactCompilerConfig = {
@@ -11,6 +12,7 @@ const ReactCompilerConfig = {
 
 export default defineConfig({
   plugins: [
+    mkcert(),
     TanStackRouterVite({
       routeTreeFileHeader: [
         "/* eslint-disable eslint-comments/no-unlimited-disable */",

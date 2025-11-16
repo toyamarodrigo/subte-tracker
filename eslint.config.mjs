@@ -16,6 +16,7 @@ export default antfu({
     semi: true,
     quotes: "double",
   },
+  ignores: ["PLAN.md"],
 }, {
   rules: {
     "ts/consistent-type-definitions": ["error", "type"],
@@ -33,7 +34,7 @@ export default antfu({
       "error",
       {
         case: "kebabCase",
-        ignore: ["README.md", "PLAN.md"],
+        ignore: ["README.md", "PLAN.md", /^\$.*\.tsx?$/],
       },
     ],
     "react-compiler/react-compiler": "error",
