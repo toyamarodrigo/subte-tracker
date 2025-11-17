@@ -11,9 +11,10 @@ type StopListProps = {
   routeId: string;
   stopsWithArrivals?: StopWithArrival[];
   onStopSelect?: (stop: Stop) => void;
+  serverTimestamp?: number;
 };
 
-export const StopList = ({ stops, routeId, stopsWithArrivals, onStopSelect }: StopListProps) => {
+export const StopList = ({ stops, routeId, stopsWithArrivals, onStopSelect, serverTimestamp }: StopListProps) => {
   const currentTime = useCurrentTime();
 
   if (stops.length === 0) {
@@ -50,7 +51,7 @@ export const StopList = ({ stops, routeId, stopsWithArrivals, onStopSelect }: St
                   <h3 className="font-medium">{stop.stop_name}</h3>
                   {arrival && (
                     <div className="text-sm text-muted-foreground mt-1">
-                      {getTimeUntilArrival(arrival.estimatedArrivalTime, currentTime)}
+                      {getTimeUntilArrival(arrival.estimatedArrivalTime, currentTime, serverTimestamp)}
                       {" "}
                       -
                       {" "}
@@ -60,7 +61,7 @@ export const StopList = ({ stops, routeId, stopsWithArrivals, onStopSelect }: St
                 </div>
                 {arrival && (
                   <div className="text-lg font-semibold ml-4">
-                    {getTimeUntilArrival(arrival.estimatedArrivalTime, currentTime)}
+                    {getTimeUntilArrival(arrival.estimatedArrivalTime, currentTime, serverTimestamp)}
                   </div>
                 )}
               </div>

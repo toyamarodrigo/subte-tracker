@@ -85,6 +85,7 @@ export const StopSelector = ({ routeId, onStopSelect }: StopSelectorProps) => {
         routeId={routeId}
         stopsWithArrivals={realtimeData?.lineStopsWithArrivals}
         onStopSelect={onStopSelect}
+        serverTimestamp={realtimeData?.timestamp}
       />
     </div>
   );

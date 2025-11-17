@@ -25,13 +25,24 @@ export const formatTime = (
 export const getTimeUntilArrival = (
   arrivalTimestampInSeconds: number | undefined,
   currentTime: Date,
+  serverTimestamp?: number,
 ): string => {
   if (arrivalTimestampInSeconds === undefined || Number.isNaN(arrivalTimestampInSeconds)) {
     return "N/A";
   }
 
   const arrivalTimeMs = arrivalTimestampInSeconds * 1000;
-  const diffMs = arrivalTimeMs - currentTime.getTime();
+  
+  let referenceTimeMs: number;
+  if (serverTimestamp !== undefined) {
+    const elapsedMs = Date.now() - serverTimestamp;
+    referenceTimeMs = serverTimestamp + elapsedMs;
+  }
+  else {
+    referenceTimeMs = currentTime.getTime();
+  }
+  
+  const diffMs = arrivalTimeMs - referenceTimeMs;
   const diffSecondsTotal = Math.round(diffMs / 1000);
 
   if (diffSecondsTotal <= 10)

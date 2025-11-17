@@ -7,15 +7,26 @@ import { formatTime, getTimeUntilArrival } from "@/lib/utils/time";
 
 type ArrivalCardProps = {
   arrival: ArrivalInfo;
+  serverTimestamp?: number;
 };
 
-export const ArrivalCard = ({ arrival }: ArrivalCardProps) => {
+export const ArrivalCard = ({ arrival, serverTimestamp }: ArrivalCardProps) => {
   const currentTime = useCurrentTime();
-  const timeUntil = getTimeUntilArrival(arrival.estimatedArrivalTime, currentTime);
+  const timeUntil = getTimeUntilArrival(arrival.estimatedArrivalTime, currentTime, serverTimestamp);
   const formattedTime = formatTime(arrival.estimatedArrivalTime);
 
+  const arrivalTimeMs = arrival.estimatedArrivalTime ? arrival.estimatedArrivalTime * 1000 : 0;
+  let referenceTimeMs: number;
+  if (serverTimestamp !== undefined) {
+    const elapsedMs = Date.now() - serverTimestamp;
+    referenceTimeMs = serverTimestamp + elapsedMs;
+  }
+  else {
+    referenceTimeMs = currentTime.getTime();
+  }
+  
   const diffSeconds = arrival.estimatedArrivalTime
-    ? Math.round((arrival.estimatedArrivalTime * 1000 - currentTime.getTime()) / 1000)
+    ? Math.round((arrivalTimeMs - referenceTimeMs) / 1000)
     : Infinity;
 
   let colorClass = "text-blue-600";

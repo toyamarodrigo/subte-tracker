@@ -7,9 +7,10 @@ import { formatTime, getTimeUntilArrival } from "@/lib/utils/time";
 type StopLineItemProps = {
   stop: StopWithArrival;
   isSelected?: boolean;
+  serverTimestamp?: number;
 };
 
-export const StopLineItem = ({ stop, isSelected }: StopLineItemProps) => {
+export const StopLineItem = ({ stop, isSelected, serverTimestamp }: StopLineItemProps) => {
   const currentTime = useCurrentTime();
 
   return (
@@ -19,7 +20,7 @@ export const StopLineItem = ({ stop, isSelected }: StopLineItemProps) => {
           <div className="font-medium">{stop.stopName}</div>
           {stop.nextArrival && (
             <div className="text-sm text-muted-foreground">
-              {getTimeUntilArrival(stop.nextArrival.estimatedArrivalTime, currentTime)}
+              {getTimeUntilArrival(stop.nextArrival.estimatedArrivalTime, currentTime, serverTimestamp)}
               {" "}
               -
               {formatTime(stop.nextArrival.estimatedArrivalTime)}
@@ -28,7 +29,7 @@ export const StopLineItem = ({ stop, isSelected }: StopLineItemProps) => {
         </div>
         {stop.nextArrival && (
           <div className="text-lg font-semibold">
-            {getTimeUntilArrival(stop.nextArrival.estimatedArrivalTime, currentTime)}
+            {getTimeUntilArrival(stop.nextArrival.estimatedArrivalTime, currentTime, serverTimestamp)}
           </div>
         )}
       </div>

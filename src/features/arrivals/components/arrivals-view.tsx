@@ -27,6 +27,8 @@ export const ArrivalsView = ({
     );
   }
 
+  const serverTimestamp = data.timestamp;
+
   return (
     <div className="space-y-6">
       <ArrivalsHeader
@@ -38,7 +40,7 @@ export const ArrivalsView = ({
       />
       <div>
         <h2 className="text-lg font-semibold mb-4">Próximos arribos</h2>
-        <ArrivalsList arrivals={data.arrivals} />
+        <ArrivalsList arrivals={data.arrivals} serverTimestamp={serverTimestamp} />
       </div>
       {data.lineStopsWithArrivals.length > 0 && (
         <div>
@@ -46,6 +48,7 @@ export const ArrivalsView = ({
           <StopLineView
             stops={data.lineStopsWithArrivals}
             selectedStopId={selectedStopId}
+            serverTimestamp={serverTimestamp}
           />
         </div>
       )}
