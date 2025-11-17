@@ -1,28 +1,88 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import type {
-  AverageDurationsData,
-  ExternalApiResponse,
-  Frequency,
-  RealtimeResponse,
-  RouteToStopsData,
-} from "../src/types";
-import { DWELL_TIME_SECONDS, LINES_WITH_VALID_REPORTS, MAX_ARRIVALS_TO_RETURN } from "../src/constants";
-import { getCurrentFrequency } from "../src/features/arrivals/utils/get-frequency";
-import { getTotalTravelTime } from "../src/features/arrivals/utils/get-travel-time";
 
-function loadLocalJsonData<T>(filePath: string): T | null {
+// Types (inlined to avoid import issues)
+type ExternalApiArrivalDepartureInfo = { time?: number; delay?: number };
+type ExternalApiStation = { stop_id: string; stop_name: string; arrival?: ExternalApiArrivalDepartureInfo; departure?: ExternalApiArrivalDepartureInfo };
+type ExternalApiTripLinea = { Trip_Id: string; Route_Id: string; Direction_ID: number | string; start_time: string; start_date: string; Estaciones: ExternalApiStation[] };
+type ExternalApiEntity = { ID: string; Linea: ExternalApiTripLinea };
+type ExternalApiResponse = { Header: { timestamp: number }; Entity: ExternalApiEntity[] };
+
+type StopOnLine = { stopId: string; stopName: string; sequence: number };
+type RouteToStopsData = Record<string, StopOnLine[]>;
+type AverageDuration = { from_stop_id: string; to_stop_id: string; average_duration_seconds: number; sample_size: number };
+type LineAverageDurations = { [lineShortName: string]: AverageDuration[] };
+type AverageDurationsData = { lineAverageDurations: LineAverageDurations };
+type Frequency = { trip_id: string; start_time: string; end_time: string; headway_secs: number; exact_times: number };
+type ArrivalStatus = "on-time" | "delayed" | "early" | "unknown";
+type ArrivalInfo = { tripId: string; routeId: string; estimatedArrivalTime: number; delaySeconds: number; status: ArrivalStatus; departureTimeFromTerminal?: string; vehicleId?: string; isEstimate?: boolean };
+type StopWithArrival = { stopId: string; stopName: string; sequence: number; nextArrival?: { estimatedArrivalTime: number; delaySeconds: number; status: ArrivalStatus } };
+type FrequencyInfo = { startTime: string; endTime: string; headwaySeconds: number };
+type RealtimeResponse = { arrivals: ArrivalInfo[]; lineStopsWithArrivals: StopWithArrival[]; timestamp: number; frequency?: FrequencyInfo; shouldShowNoDataMessage?: boolean };
+
+// Constants
+const DWELL_TIME_SECONDS = 24;
+const MAX_ARRIVALS_TO_RETURN = 4;
+const LINES_WITH_VALID_REPORTS = new Set(["LineaA", "LineaB", "LineaE"]);
+
+// Utility functions (inlined)
+function getCurrentFrequency(tripId: string, frequencies: Frequency[]): Frequency | null {
+  const now = new Date();
+  const currentSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  return frequencies.find((f) => {
+    if (f.trip_id !== tripId) return false;
+    const startParts = f.start_time.split(":").map(Number);
+    const endParts = f.end_time.split(":").map(Number);
+    const startSeconds = startParts[0] * 3600 + startParts[1] * 60 + (startParts[2] || 0);
+    const endSeconds = endParts[0] * 3600 + endParts[1] * 60 + (endParts[2] || 0);
+    return currentSeconds >= startSeconds && currentSeconds <= endSeconds;
+  }) || null;
+}
+
+function getTotalTravelTime(startStopId: string, endStopId: string, stopSequence: StopOnLine[], averageDurations: AverageDuration[]): number | null {
+  const startIndex = stopSequence.findIndex(s => s.stopId === startStopId);
+  const endIndex = stopSequence.findIndex(s => s.stopId === endStopId);
+  if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) return null;
+  let totalDuration = 0;
+  for (let i = startIndex; i < endIndex; i++) {
+    const current = stopSequence[i];
+    const next = stopSequence[i + 1];
+    const segment = averageDurations.find(d => d.from_stop_id === current.stopId && d.to_stop_id === next.stopId);
+    if (!segment) return null;
+    totalDuration += segment.average_duration_seconds;
+  }
+  return totalDuration;
+}
+
+async function loadLocalJsonData<T>(filePath: string, baseUrl?: string): Promise<T | null> {
+  // Try filesystem first (for local dev)
   try {
     const fullPath = join(process.cwd(), "public", filePath);
     
-    if (!existsSync(fullPath)) {
-      console.error(`[API /api/realtime] Error: File not found - ${fullPath}`);
+    if (existsSync(fullPath)) {
+      const fileData = readFileSync(fullPath, "utf8");
+      return JSON.parse(fileData) as T;
+    }
+  } catch (error) {
+    console.warn(`[API /api/realtime] Filesystem read failed for ${filePath}, trying HTTP fetch`);
+  }
+
+  // Fallback to HTTP fetch (for Vercel production)
+  try {
+    const url = baseUrl 
+      ? `${baseUrl}/${filePath}`
+      : `https://${process.env.VERCEL_URL || "subte-tracker.vercel.app"}/${filePath}`;
+    
+    console.log(`[API /api/realtime] Fetching ${filePath} from ${url}`);
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`[API /api/realtime] HTTP fetch failed for ${filePath}: ${response.status}`);
       return null;
     }
     
-    const fileData = readFileSync(fullPath, "utf8");
-    return JSON.parse(fileData) as T;
+    return await response.json() as T;
   } catch (error) {
     console.error(`[API /api/realtime] Error loading ${filePath}:`, error);
     return null;
@@ -79,11 +139,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Load local data
-    const routeToStopsDefinition = loadLocalJsonData<RouteToStopsData>("data/gtfs-route-to-stops.json");
-    const averageDurationsData = loadLocalJsonData<AverageDurationsData>(
-      "data/gtfs-tiempo-promedio-entre-estaciones.json",
-    );
-    const frequenciesData = loadLocalJsonData<Frequency[]>("data/gtfs-frequencies.json");
+    const baseUrl = req.headers.host 
+      ? `https://${req.headers.host}`
+      : process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}`
+        : undefined;
+
+    const [routeToStopsDefinition, averageDurationsData, frequenciesData] = await Promise.all([
+      loadLocalJsonData<RouteToStopsData>("data/gtfs-route-to-stops.json", baseUrl),
+      loadLocalJsonData<AverageDurationsData>("data/gtfs-tiempo-promedio-entre-estaciones.json", baseUrl),
+      loadLocalJsonData<Frequency[]>("data/gtfs-frequencies.json", baseUrl),
+    ]);
 
     if (!routeToStopsDefinition || !averageDurationsData) {
       console.error(
@@ -318,10 +384,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   catch (error: unknown) {
     let errorMessage = "Unexpected error processing realtime request";
-    if (error instanceof Error) errorMessage = error.message;
-    else if (typeof error === "string") errorMessage = error;
-    console.error(`[API /api/realtime] CATCH GENERAL ERROR: ${errorMessage}`, error);
-    return res.status(500).json({ error: errorMessage });
+    let errorStack: string | undefined;
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorStack = error.stack;
+    }
+    else if (typeof error === "string") {
+      errorMessage = error;
+    }
+    
+    console.error(`[API /api/realtime] CATCH GENERAL ERROR: ${errorMessage}`, {
+      error,
+      stack: errorStack,
+      routeId: req.query.routeId,
+      stopId: req.query.stopId,
+      direction: req.query.direction,
+    });
+    
+    return res.status(500).json({ 
+      error: errorMessage,
+      ...(process.env.NODE_ENV === "development" && { stack: errorStack }),
+    });
   }
 }
 
