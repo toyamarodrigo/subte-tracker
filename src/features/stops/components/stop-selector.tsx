@@ -12,39 +12,35 @@ import { StopSearchInput } from "./stop-search-input";
 
 type StopSelectorProps = {
   routeId: string;
+  directionId?: string;
   onStopSelect?: (stop: Stop) => void;
 };
 
-export const StopSelector = ({ routeId, onStopSelect }: StopSelectorProps) => {
+export const StopSelector = ({ routeId, directionId, onStopSelect }: StopSelectorProps) => {
   const { data: allStops } = useSuspenseQuery(stopsQueryOptions);
   const { data: routeToStops } = useSuspenseQuery(routeToStopsQueryOptions);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const firstStopId = useMemo(() => {
-    const directionKey = `${routeId}_0`;
+  const selectedDirectionId = directionId || "0";
+
+  const stopsForDirection = useMemo(() => {
+    const directionKey = `${routeId}_${selectedDirectionId}`;
     const stops = routeToStops[directionKey] || [];
 
-    return stops[0]?.stopId;
-  }, [routeToStops, routeId]);
+    return stops.map(s => s.stopId);
+  }, [routeToStops, routeId, selectedDirectionId]);
+
+  const firstStopId = useMemo(() => {
+    return stopsForDirection[0];
+  }, [stopsForDirection]);
 
   const { data: realtimeData, isLoading: isLoadingRealtime, error: realtimeError } = useQuery({
-    ...realtimeQueryOptions(routeId, firstStopId || "", "0"),
-    enabled: !!firstStopId,
+    ...realtimeQueryOptions(routeId, firstStopId || "", selectedDirectionId),
+    enabled: !!firstStopId && !!selectedDirectionId,
   });
 
   const filteredStops = useMemo(() => {
-    const stopsForRoute = new Set<string>();
-
-    for (const directionId of ["0", "1"]) {
-      const directionKey = `${routeId}_${directionId}`;
-      const stops = routeToStops[directionKey] || [];
-
-      for (const stop of stops) {
-        stopsForRoute.add(stop.stopId);
-      }
-    }
-
-    let stops = allStops.filter(stop => stopsForRoute.has(stop.stop_id));
+    let stops = allStops.filter(stop => stopsForDirection.includes(stop.stop_id));
 
     if (searchQuery.trim()) {
       const queryLower = searchQuery.toLowerCase();
@@ -54,18 +50,8 @@ export const StopSelector = ({ routeId, onStopSelect }: StopSelectorProps) => {
       );
     }
 
-    const seenStopNames = new Set<string>();
-    const uniqueStops: Stop[] = [];
-
-    for (const stop of stops) {
-      if (!seenStopNames.has(stop.stop_name)) {
-        seenStopNames.add(stop.stop_name);
-        uniqueStops.push(stop);
-      }
-    }
-
-    return uniqueStops;
-  }, [allStops, routeToStops, routeId, searchQuery]);
+    return stops;
+  }, [allStops, stopsForDirection, searchQuery]);
 
   return (
     <div className="space-y-4">

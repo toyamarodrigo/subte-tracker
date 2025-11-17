@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { readFileSync, existsSync } from "node:fs";
+
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Types (inlined to avoid import issues)
@@ -30,12 +31,15 @@ const LINES_WITH_VALID_REPORTS = new Set(["LineaA", "LineaB", "LineaE"]);
 function getCurrentFrequency(tripId: string, frequencies: Frequency[]): Frequency | null {
   const now = new Date();
   const currentSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
   return frequencies.find((f) => {
-    if (f.trip_id !== tripId) return false;
+    if (f.trip_id !== tripId)
+      return false;
     const startParts = f.start_time.split(":").map(Number);
     const endParts = f.end_time.split(":").map(Number);
     const startSeconds = startParts[0] * 3600 + startParts[1] * 60 + (startParts[2] || 0);
     const endSeconds = endParts[0] * 3600 + endParts[1] * 60 + (endParts[2] || 0);
+
     return currentSeconds >= startSeconds && currentSeconds <= endSeconds;
   }) || null;
 }
@@ -43,15 +47,21 @@ function getCurrentFrequency(tripId: string, frequencies: Frequency[]): Frequenc
 function getTotalTravelTime(startStopId: string, endStopId: string, stopSequence: StopOnLine[], averageDurations: AverageDuration[]): number | null {
   const startIndex = stopSequence.findIndex(s => s.stopId === startStopId);
   const endIndex = stopSequence.findIndex(s => s.stopId === endStopId);
-  if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) return null;
+
+  if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex)
+    return null;
   let totalDuration = 0;
+
   for (let i = startIndex; i < endIndex; i++) {
     const current = stopSequence[i];
     const next = stopSequence[i + 1];
     const segment = averageDurations.find(d => d.from_stop_id === current.stopId && d.to_stop_id === next.stopId);
-    if (!segment) return null;
+
+    if (!segment)
+      return null;
     totalDuration += segment.average_duration_seconds;
   }
+
   return totalDuration;
 }
 
@@ -59,32 +69,39 @@ async function loadLocalJsonData<T>(filePath: string, baseUrl?: string): Promise
   // Try filesystem first (for local dev)
   try {
     const fullPath = join(process.cwd(), "public", filePath);
-    
+
     if (existsSync(fullPath)) {
       const fileData = readFileSync(fullPath, "utf8");
+
       return JSON.parse(fileData) as T;
     }
-  } catch (error) {
+  }
+  catch {
     console.warn(`[API /api/realtime] Filesystem read failed for ${filePath}, trying HTTP fetch`);
   }
 
   // Fallback to HTTP fetch (for Vercel production)
   try {
-    const url = baseUrl 
+    // eslint-disable-next-line node/no-process-env
+    const vercelUrl = process.env.VERCEL_URL || "subte-tracker.vercel.app";
+    const url = baseUrl
       ? `${baseUrl}/${filePath}`
-      : `https://${process.env.VERCEL_URL || "subte-tracker.vercel.app"}/${filePath}`;
-    
-    console.log(`[API /api/realtime] Fetching ${filePath} from ${url}`);
+      : `https://${vercelUrl}/${filePath}`;
+
+    console.warn(`[API /api/realtime] Fetching ${filePath} from ${url}`);
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       console.error(`[API /api/realtime] HTTP fetch failed for ${filePath}: ${response.status}`);
+
       return null;
     }
-    
+
     return await response.json() as T;
-  } catch (error) {
+  }
+  catch (error) {
     console.error(`[API /api/realtime] Error loading ${filePath}:`, error);
+
     return null;
   }
 }
@@ -101,18 +118,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "routeId, stopId, and direction are required" });
     }
 
+    // eslint-disable-next-line node/no-process-env
     const CLIENT_ID = process.env.SUBTE_API_CLIENT_ID;
+    // eslint-disable-next-line node/no-process-env
     const CLIENT_SECRET = process.env.SUBTE_API_CLIENT_SECRET;
 
     if (!CLIENT_ID || !CLIENT_SECRET) {
       console.error("[API /api/realtime] Error: API credentials not configured");
+
       return res.status(500).json({ error: "Server configuration error (realtime)" });
     }
 
     const shouldShowNoDataMessage = !LINES_WITH_VALID_REPORTS.has(String(routeId));
 
     // Fetch external API
-    console.log("[API /api/realtime] Fetching external API");
+    console.warn("[API /api/realtime] Fetching external API");
     const externalResponse = await fetch(
       `https://apitransporte.buenosaires.gob.ar/subtes/forecastGTFS?client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}`,
       {
@@ -123,9 +143,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!externalResponse.ok) {
       const errorBody = await externalResponse.text();
+
       console.error(
         `[API /api/realtime] External API error: ${externalResponse.status} ${externalResponse.statusText}. Body: ${errorBody.substring(0, 500)}`,
       );
+
       return res.status(502).json({
         error: `Error ${externalResponse.status} contacting subway service.`,
       });
@@ -135,14 +157,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!externalData?.Header || !externalData?.Entity) {
       console.error("[API /api/realtime] Error: Invalid external API response");
+
       return res.status(502).json({ error: "Invalid response from subway service" });
     }
 
     // Load local data
-    const baseUrl = req.headers.host 
+    // eslint-disable-next-line node/no-process-env
+    const vercelUrl = process.env.VERCEL_URL;
+    const baseUrl = req.headers.host
       ? `https://${req.headers.host}`
-      : process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}`
+      : vercelUrl
+        ? `https://${vercelUrl}`
         : undefined;
 
     const [routeToStopsDefinition, averageDurationsData, frequenciesData] = await Promise.all([
@@ -155,6 +180,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error(
         "[API /api/realtime] Error: Could not load route_to_stops or average durations data",
       );
+
       return res.status(500).json({ error: "Internal server error loading route data" });
     }
 
@@ -168,6 +194,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (currentStopSequence.length === 0) {
       console.warn(`No stop sequence found for ${routeIdStr} direction ${directionStr}`);
+
       return res.json({
         arrivals: [],
         lineStopsWithArrivals: [],
@@ -194,7 +221,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (tripInfo.Direction_ID !== undefined && tripInfo.Direction_ID !== null) {
         const parsedNum = Number.parseInt(String(tripInfo.Direction_ID), 10);
-        if (!Number.isNaN(parsedNum)) tripDirectionIdNum = parsedNum;
+
+        if (!Number.isNaN(parsedNum))
+          tripDirectionIdNum = parsedNum;
       }
 
       if (tripInfo.Route_Id === routeIdStr && tripDirectionIdNum === targetDirectionIdNum) {
@@ -204,6 +233,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const delayAtStation = station.arrival.delay ?? 0;
 
             let isValidReport: boolean;
+
             if (LINES_WITH_VALID_REPORTS.has(tripInfo.Route_Id)) {
               isValidReport = true;
             }
@@ -213,11 +243,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (isValidReport) {
               const estimatedArrivalTimeForStation = headerTime + delayAtStation;
+
               if (estimatedArrivalTimeForStation >= headerTime - 60) {
                 let arrivalStatusForStation: "on-time" | "delayed" | "early" | "unknown" = "unknown";
-                if (delayAtStation === 0) arrivalStatusForStation = "on-time";
-                else if (delayAtStation < 0 && delayAtStation >= -180) arrivalStatusForStation = "early";
-                else if (delayAtStation < -180 || delayAtStation > 180) arrivalStatusForStation = "delayed";
+
+                if (delayAtStation === 0)
+                  arrivalStatusForStation = "on-time";
+                else if (delayAtStation < 0 && delayAtStation >= -180)
+                  arrivalStatusForStation = "early";
+                else if (delayAtStation < -180 || delayAtStation > 180)
+                  arrivalStatusForStation = "delayed";
 
                 const currentArrivalInfo = {
                   estimatedArrivalTime: estimatedArrivalTimeForStation,
@@ -225,6 +260,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                   status: arrivalStatusForStation,
                 };
                 const existingBest = bestArrivalPerStopId.get(station.stop_id);
+
                 if (
                   !existingBest
                   || currentArrivalInfo.estimatedArrivalTime < existingBest.estimatedArrivalTime
@@ -253,6 +289,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (targetStopIndex === -1) {
       console.warn(`Selected stop ${stopIdStr} not found in route sequence ${routeIdStr}`);
+
       return res.json({
         arrivals: [],
         lineStopsWithArrivals: [],
@@ -279,6 +316,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               && s.arrival.time === arrivalAtTarget.estimatedArrivalTime - arrivalAtTarget.delaySeconds,
           ),
       );
+
       if (!tripDetailsSourceEntity) {
         tripDetailsSourceEntity = externalData.Entity.find(
           e =>
@@ -324,12 +362,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             currentStopSequence,
             durationsForLine,
           );
+
           if (travelTime !== null) {
             const numIntermediateDwells = N;
             const projectedArrivalTime
               = arrivalAtCurrentStop.estimatedArrivalTime
-              + travelTime
-              + numIntermediateDwells * DWELL_TIME_SECONDS;
+                + travelTime
+                + numIntermediateDwells * DWELL_TIME_SECONDS;
+
             if (projectedArrivalTime > headerTime && projectedArrivalTime > lastRelevantArrivalTime) {
               finalArrivals.push({
                 status: arrivalAtCurrentStop.status,
@@ -352,7 +392,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const limitedFinalArrivals = finalArrivals.slice(0, MAX_ARRIVALS_TO_RETURN);
 
     // Build line stops with arrivals
-    const lineStopsWithArrivals = currentStopSequence.map((baseStop) => ({
+    const lineStopsWithArrivals = currentStopSequence.map(baseStop => ({
       stopId: baseStop.stopId,
       stopName: baseStop.stopName,
       sequence: baseStop.sequence,
@@ -361,8 +401,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Get frequency info
     let frequency;
+
     if (frequenciesData && tripIdForFrequency) {
       const currentFrequency = getCurrentFrequency(tripIdForFrequency, frequenciesData);
+
       if (currentFrequency) {
         frequency = {
           startTime: currentFrequency.start_time,
@@ -385,7 +427,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   catch (error: unknown) {
     let errorMessage = "Unexpected error processing realtime request";
     let errorStack: string | undefined;
-    
+
     if (error instanceof Error) {
       errorMessage = error.message;
       errorStack = error.stack;
@@ -393,7 +435,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     else if (typeof error === "string") {
       errorMessage = error;
     }
-    
+
     console.error(`[API /api/realtime] CATCH GENERAL ERROR: ${errorMessage}`, {
       error,
       stack: errorStack,
@@ -401,11 +443,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stopId: req.query.stopId,
       direction: req.query.direction,
     });
-    
-    return res.status(500).json({ 
+
+    // eslint-disable-next-line node/no-process-env
+    const isDevelopment = process.env.NODE_ENV === "development";
+
+    return res.status(500).json({
       error: errorMessage,
-      ...(process.env.NODE_ENV === "development" && { stack: errorStack }),
+      ...(isDevelopment && { stack: errorStack }),
     });
   }
 }
-

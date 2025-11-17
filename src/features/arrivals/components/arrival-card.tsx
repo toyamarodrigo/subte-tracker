@@ -17,14 +17,17 @@ export const ArrivalCard = ({ arrival, serverTimestamp }: ArrivalCardProps) => {
 
   const arrivalTimeMs = arrival.estimatedArrivalTime ? arrival.estimatedArrivalTime * 1000 : 0;
   let referenceTimeMs: number;
+
   if (serverTimestamp !== undefined) {
-    const elapsedMs = Date.now() - serverTimestamp;
+    const clientTimeNow = currentTime.getTime();
+    const elapsedMs = clientTimeNow - serverTimestamp;
+
     referenceTimeMs = serverTimestamp + elapsedMs;
   }
   else {
     referenceTimeMs = currentTime.getTime();
   }
-  
+
   const diffSeconds = arrival.estimatedArrivalTime
     ? Math.round((arrivalTimeMs - referenceTimeMs) / 1000)
     : Infinity;
@@ -32,7 +35,7 @@ export const ArrivalCard = ({ arrival, serverTimestamp }: ArrivalCardProps) => {
   let colorClass = "text-blue-600";
   let animateClass = "";
 
-  if (diffSeconds <= 10) {
+  if (diffSeconds <= 30) {
     colorClass = "text-red-600";
     animateClass = "animate-pulse";
   }
