@@ -244,7 +244,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (isValidReport) {
               const estimatedArrivalTimeForStation = headerTime + delayAtStation;
 
-              if (estimatedArrivalTimeForStation >= headerTime - 60) {
+              if (estimatedArrivalTimeForStation >= headerTime) {
                 let arrivalStatusForStation: "on-time" | "delayed" | "early" | "unknown" = "unknown";
 
                 if (delayAtStation === 0)
@@ -392,12 +392,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const limitedFinalArrivals = finalArrivals.slice(0, MAX_ARRIVALS_TO_RETURN);
 
     // Build line stops with arrivals
-    const lineStopsWithArrivals = currentStopSequence.map(baseStop => ({
-      stopId: baseStop.stopId,
-      stopName: baseStop.stopName,
-      sequence: baseStop.sequence,
-      nextArrival: bestArrivalPerStopId.get(baseStop.stopId),
-    }));
+    const lineStopsWithArrivals = currentStopSequence
+      .map(baseStop => ({
+        stopId: baseStop.stopId,
+        stopName: baseStop.stopName,
+        sequence: baseStop.sequence,
+        nextArrival: bestArrivalPerStopId.get(baseStop.stopId),
+      }))
+      .filter((stop) => {
+        const arrival = stop.nextArrival;
+
+        return !arrival || arrival.estimatedArrivalTime >= headerTime;
+      });
 
     // Get frequency info
     let frequency;

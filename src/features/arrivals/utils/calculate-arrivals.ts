@@ -73,7 +73,7 @@ export const calculateArrivals = (
           if (isValidReport) {
             const estimatedArrivalTime = headerTime + delay;
 
-            if (estimatedArrivalTime >= headerTime - 60) {
+            if (estimatedArrivalTime >= headerTime) {
               let status: ArrivalStatus = "unknown";
 
               if (delay === 0)
@@ -183,12 +183,18 @@ export const calculateArrivals = (
   finalArrivals.sort((a, b) => a.estimatedArrivalTime - b.estimatedArrivalTime);
   const limitedArrivals = finalArrivals.slice(0, MAX_ARRIVALS_TO_RETURN);
 
-  const lineStopsWithArrivals: StopWithArrival[] = currentStopSequence.map(stop => ({
-    stopId: stop.stopId,
-    stopName: stop.stopName,
-    sequence: stop.sequence,
-    nextArrival: bestArrivalPerStopId.get(stop.stopId),
-  }));
+  const lineStopsWithArrivals: StopWithArrival[] = currentStopSequence
+    .map(stop => ({
+      stopId: stop.stopId,
+      stopName: stop.stopName,
+      sequence: stop.sequence,
+      nextArrival: bestArrivalPerStopId.get(stop.stopId),
+    }))
+    .filter((stop) => {
+      const arrival = stop.nextArrival;
+
+      return !arrival || arrival.estimatedArrivalTime >= headerTime;
+    });
 
   let frequency;
 

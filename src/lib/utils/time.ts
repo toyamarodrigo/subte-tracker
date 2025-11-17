@@ -48,9 +48,9 @@ export const getTimeUntilArrival = (
   const diffMs = arrivalTimeMs - referenceTimeMs;
   const diffSecondsTotal = Math.round(diffMs / 1000);
 
+  if (diffSecondsTotal < -180)
+    return "Pasó";
   if (diffSecondsTotal <= 30)
-    return "Llegando";
-  if (diffSecondsTotal < 0)
     return "Llegando";
   if (diffSecondsTotal < 120) {
     return "~1 min";
